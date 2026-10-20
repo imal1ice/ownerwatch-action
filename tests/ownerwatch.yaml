@@ -1,0 +1,7 @@
+# Test config for the action: one well-known timelock on Ethereum.
+rpc_url: "https://rpc.flashbots.net"
+probe_rpc_url: "https://eth.drpc.org"
+chain_name: ethereum
+contracts:
+  - address: "0x6d903f6003cca6255D85CcA4D3B5E5146dC33925"
+    label: "Compound Timelock"

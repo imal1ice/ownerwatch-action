@@ -1,0 +1,104 @@
+name: "ownerwatch admin-surface check"
+description: "Fail CI when the admin surface of your EVM contracts drifts: owners, proxy admins, implementations, roles, Safe signers and thresholds, timelock delays."
+author: "imal1ice"
+branding:
+  icon: "shield"
+  color: "blue"
+inputs:
+  config:
+    description: "Path to the ownerwatch config listing the contracts and Safes to probe."
+    required: false
+    default: "ownerwatch.yaml"
+  baseline:
+    description: "Path to the committed admin-surface report to compare against. Commit the generated report here on the first run."
+    required: false
+    default: "admin-surface.md"
+  label:
+    description: "Protocol name used in the report heading."
+    required: false
+    default: "${{ github.repository }}"
+  rpc:
+    description: "RPC URL that allows eth_call, overriding the config for single-chain configs. Multi-chain configs set probe_rpc_url per chain instead."
+    required: false
+    default: ""
+  roles-from-logs:
+    description: "Replay RoleGranted/RoleRevoked logs to list every current role holder (slower; needs log history)."
+    required: false
+    default: "false"
+  fail-on-drift:
+    description: "Fail the step when the report differs from the baseline (or when no baseline exists yet)."
+    required: false
+    default: "true"
+  version:
+    description: "ownerwatch version to install from PyPI, e.g. 0.7.3. Empty installs the latest."
+    required: false
+    default: ""
+outputs:
+  drifted:
+    description: "true when the admin surface differs from the baseline or no baseline exists."
+    value: ${{ steps.compare.outputs.drifted }}
+  report:
+    description: "Path of the freshly generated report."
+    value: ${{ steps.probe.outputs.report }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install ownerwatch
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then pip install -q "ownerwatch==${{ inputs.version }}"; else pip install -q ownerwatch; fi
+        ownerwatch --version
+    - name: Probe the admin surface
+      id: probe
+      shell: bash
+      run: |
+        set -euo pipefail
+        base="${{ inputs.baseline }}"
+        report="${base%.md}.new.md"
+        args=(probe --config "${{ inputs.config }}" --markdown --label "${{ inputs.label }}")
+        if [ -n "${{ inputs.rpc }}" ]; then args+=(--rpc "${{ inputs.rpc }}"); fi
+        if [ "${{ inputs.roles-from-logs }}" = "true" ]; then args+=(--roles-from-logs); fi
+        ownerwatch "${args[@]}" > "$report"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+    - name: Compare with the committed baseline
+      id: compare
+      shell: bash
+      run: |
+        set -uo pipefail
+        base="${{ inputs.baseline }}"
+        report="${{ steps.probe.outputs.report }}"
+        strip() { grep -v '^_Generated' "$1"; }
+        if [ ! -f "$base" ]; then
+          echo "drifted=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Admin surface: no baseline yet"
+            echo
+            echo "Commit \`$report\` as \`$base\` to seed the baseline. Current report:"
+            echo
+            cat "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::No baseline at $base. Commit $report as $base to seed it."
+          cat "$report"
+          if [ "${{ inputs.fail-on-drift }}" = "true" ]; then exit 1; fi
+          exit 0
+        fi
+        if diff_out=$(diff <(strip "$base") <(strip "$report")); then
+          echo "drifted=false" >> "$GITHUB_OUTPUT"
+          echo "## Admin surface unchanged" >> "$GITHUB_STEP_SUMMARY"
+          echo "Admin surface unchanged."
+        else
+          echo "drifted=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Admin surface changed"
+            echo
+            echo '```diff'
+            echo "$diff_out"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$diff_out"
+          echo "::error::Admin surface changed since the committed report at $base. Review the diff, then commit $report as $base if the change is expected."
+          if [ "${{ inputs.fail-on-drift }}" = "true" ]; then exit 1; fi
+        fi

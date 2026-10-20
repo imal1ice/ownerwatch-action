@@ -1,0 +1,18 @@
+name: test
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "23 7 * * 1"
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: check
+        with:
+          config: tests/ownerwatch.yaml
+          baseline: tests/admin-surface.md
+          label: "ownerwatch-action test"
+      - run: echo "drifted=${{ steps.check.outputs.drifted }} report=${{ steps.check.outputs.report }}"
