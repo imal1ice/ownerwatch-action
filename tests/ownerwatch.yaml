@@ -1,5 +1,5 @@
 # Test config for the action: one well-known timelock on Ethereum.
-rpc_url: "https://rpc.flashbots.net"
+rpc_url: "https://mainnet.gateway.tenderly.co"
 probe_rpc_url: "https://eth.drpc.org"
 chain_name: ethereum
 contracts:
