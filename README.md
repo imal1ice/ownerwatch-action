@@ -40,6 +40,8 @@ jobs:
 | `fail-on-drift` | `true` | Fail the step on drift or missing baseline. Set `false` to only report. |
 | `version` | latest | Pin an ownerwatch version from PyPI. |
 
+Drift is judged on the table of controllers, types and delays. The Findings section is shown in the summary but does not count, so rewording in a new ownerwatch release does not fail CI.
+
 ## Outputs
 
 | Output | Meaning |

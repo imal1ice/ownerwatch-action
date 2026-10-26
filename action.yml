@@ -70,7 +70,9 @@ runs:
         set -uo pipefail
         base="${{ inputs.baseline }}"
         report="${{ steps.probe.outputs.report }}"
-        strip() { grep -v '^_Generated' "$1"; }
+        # Compare the facts (the table: who controls what, type, delay), not the Findings prose,
+        # so a wording change in a new ownerwatch release does not read as drift.
+        strip() { grep -v '^_Generated' "$1" | sed '/^## Findings/,$d'; }
         if [ ! -f "$base" ]; then
           echo "drifted=true" >> "$GITHUB_OUTPUT"
           {

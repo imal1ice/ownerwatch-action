@@ -8,7 +8,7 @@
 
 ## Findings
 
-- `0x309a…c8C0`: no recognised timelock between 0x725ED7F44F0888aeC1b7630AB1ACdced91E0591A and this contract (OZ TimelockController or Compound Timelock)
+- `0x309a…c8C0`: upgrade admin is 0x725ED7F44F0888aeC1b7630AB1ACdced91E0591A with no recognised timelock in between
 
 ## Control paths
 
