@@ -38,9 +38,25 @@ jobs:
 | `rpc` | | RPC that allows `eth_call`, overriding the config (single-chain configs only). Multi-chain configs set `probe_rpc_url` per chain. |
 | `roles-from-logs` | `false` | Replay role grants from logs to list every current role holder. Slower; works keyless on Ethereum, Optimism, Arbitrum, Gnosis and Polygon. |
 | `fail-on-drift` | `true` | Fail the step on drift or missing baseline. Set `false` to only report. |
+| `disclosure` | | Path to a committed [ERC-8241](https://ethereum-magicians.org/t/erc-8241-protocol-control-disclosure/28343) control disclosure (JSON). Checked against chain state; the step fails on any mismatch or undisclosed power. Needs `rpc`. |
+| `disclosure-roles-from-logs` | `true` | Replay role grants so every role holder counts towards completeness. |
+| `logs-rpc` | | RPC for the role replay's `eth_getLogs` (default: a public full-history gateway). |
 | `version` | latest | Pin an ownerwatch version from PyPI. |
 
 Drift is judged on the table of controllers, types and delays. The Findings section is shown in the summary but does not count, so rewording in a new ownerwatch release does not fail CI.
+
+## ERC-8241 disclosures
+
+If you publish an [ERC-8241](https://ethereum-magicians.org/t/erc-8241-protocol-control-disclosure/28343) control disclosure, commit it and let CI keep it honest:
+
+```yaml
+      - uses: imal1ice/ownerwatch-action@v1
+        with:
+          disclosure: erc-8241.json
+          rpc: https://ethereum-rpc.publicnode.com
+```
+
+`ownerwatch disclosure draft <addresses> --rpc <rpc>` writes a starting disclosure from chain state. The check pins every read to one block and fails when a declared owner, admin, role, threshold, delay or edge no longer matches, or when the chain shows control over a declared component that the disclosure leaves out. Without `config`, only the disclosure is checked. See [docs/erc-8241.md](https://github.com/imal1ice/ownerwatch/blob/main/docs/erc-8241.md).
 
 ## Outputs
 
@@ -48,6 +64,7 @@ Drift is judged on the table of controllers, types and delays. The Findings sect
 |---|---|
 | `drifted` | `true` when the report differs from the baseline or no baseline exists. |
 | `report` | Path of the freshly generated report, for `actions/upload-artifact` or a bot comment. |
+| `disclosure-ok` | `true` when the ERC-8241 disclosure matches chain state with nothing undisclosed; empty without `disclosure`. |
 
 ## Notes
 

@@ -29,6 +29,18 @@ inputs:
     description: "Fail the step when the report differs from the baseline (or when no baseline exists yet)."
     required: false
     default: "true"
+  disclosure:
+    description: "Path to a committed ERC-8241 control disclosure (JSON). When set, it is checked against chain state and the step fails on any mismatch or undisclosed power. Needs ownerwatch >= 0.9.0 and the rpc input."
+    required: false
+    default: ""
+  disclosure-roles-from-logs:
+    description: "With disclosure: replay role grants from logs so every role holder counts towards completeness."
+    required: false
+    default: "true"
+  logs-rpc:
+    description: "With disclosure: RPC for eth_getLogs in the role replay (default: a public full-history gateway, else rpc)."
+    required: false
+    default: ""
   version:
     description: "ownerwatch version to install from PyPI, e.g. 0.7.3. Empty installs the latest."
     required: false
@@ -40,6 +52,9 @@ outputs:
   report:
     description: "Path of the freshly generated report."
     value: ${{ steps.probe.outputs.report }}
+  disclosure-ok:
+    description: "true when the ERC-8241 disclosure matches chain state with nothing undisclosed; empty when no disclosure is set."
+    value: ${{ steps.disclosure.outputs.ok }}
 runs:
   using: "composite"
   steps:
@@ -53,6 +68,8 @@ runs:
         ownerwatch --version
     - name: Probe the admin surface
       id: probe
+      # a disclosure-only setup has no config to probe
+      if: inputs.disclosure == '' || hashFiles(inputs.config) != ''
       shell: bash
       run: |
         set -euo pipefail
@@ -65,6 +82,7 @@ runs:
         echo "report=$report" >> "$GITHUB_OUTPUT"
     - name: Compare with the committed baseline
       id: compare
+      if: inputs.disclosure == '' || hashFiles(inputs.config) != ''
       shell: bash
       run: |
         set -uo pipefail
@@ -104,3 +122,27 @@ runs:
           echo "::error::Admin surface changed since the committed report at $base. Review the diff, then commit $report as $base if the change is expected."
           if [ "${{ inputs.fail-on-drift }}" = "true" ]; then exit 1; fi
         fi
+    - name: Check the ERC-8241 disclosure
+      id: disclosure
+      # runs even when the drift check above failed, so one run reports both
+      if: ${{ !cancelled() && inputs.disclosure != '' }}
+      shell: bash
+      run: |
+        set -uo pipefail
+        if [ -z "${{ inputs.rpc }}" ]; then echo "::error::The disclosure input needs the rpc input."; exit 1; fi
+        args=(disclosure check "${{ inputs.disclosure }}" --rpc "${{ inputs.rpc }}")
+        if [ "${{ inputs.disclosure-roles-from-logs }}" != "true" ]; then args+=(--no-roles-from-logs); fi
+        if [ -n "${{ inputs.logs-rpc }}" ]; then args+=(--logs-rpc "${{ inputs.logs-rpc }}"); fi
+        out=$(ownerwatch "${args[@]}"); rc=$?
+        echo "$out"
+        {
+          if [ $rc -eq 0 ]; then echo "## ERC-8241 disclosure matches chain state"; else echo "## ERC-8241 disclosure does not match chain state"; fi
+          echo
+          echo '```'
+          echo "$out"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ $rc -eq 0 ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+        echo "ok=false" >> "$GITHUB_OUTPUT"
+        echo "::error::The ERC-8241 disclosure at ${{ inputs.disclosure }} does not match chain state. Fix the disclosure or the contracts, then re-run."
+        if [ "${{ inputs.fail-on-drift }}" = "true" ]; then exit 1; fi

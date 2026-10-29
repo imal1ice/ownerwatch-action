@@ -1,0 +1,97 @@
+{
+  "standard": "ERC-8241",
+  "standardVersion": "core-draft",
+  "protocol": {
+    "name": "Aave V3 PoolAddressesProvider (action test)",
+    "chainId": 1,
+    "manifestHash": "0x666fa160b62db4a54b982f4591dbd40452eeed150f223971338346ac552c7f09"
+  },
+  "nonce": 1,
+  "observedAtBlock": 26297749,
+  "scope": {
+    "components": [
+      "component-2f39d2"
+    ],
+    "assets": [],
+    "exclusions": [],
+    "assumptions": []
+  },
+  "nodes": [
+    {
+      "nodeId": "contract-2f39d2",
+      "type": "CONTRACT",
+      "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e"
+    },
+    {
+      "nodeId": "contract-5300a1",
+      "type": "CONTRACT",
+      "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A"
+    },
+    {
+      "nodeId": "timelock-dabad8",
+      "type": "TIMELOCK",
+      "address": "0xdAbad81aF85554E9ae636395611C58F7eC1aAEc5",
+      "delay": 86400
+    },
+    {
+      "nodeId": "contract-d3cf97",
+      "type": "CONTRACT",
+      "address": "0xD3cF979e676265e4f6379749DECe4708B9A22476"
+    }
+  ],
+  "components": [
+    {
+      "componentId": "component-2f39d2",
+      "address": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e",
+      "nodeId": "contract-2f39d2",
+      "type": "contract",
+      "upgradeable": false
+    }
+  ],
+  "powers": [
+    {
+      "powerId": "ownership-component-2f39d2",
+      "kind": "OWNERSHIP",
+      "enabled": true,
+      "target": "component-2f39d2",
+      "controllerNodeId": "contract-5300a1"
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "owner_of-contract-5300a1-contract-2f39d2",
+      "kind": "OWNER_OF",
+      "from": "contract-5300a1",
+      "to": "contract-2f39d2",
+      "direct": true
+    },
+    {
+      "edgeId": "owner_of-timelock-dabad8-contract-5300a1",
+      "kind": "OWNER_OF",
+      "from": "timelock-dabad8",
+      "to": "contract-5300a1",
+      "direct": true
+    },
+    {
+      "edgeId": "owner_of-contract-5300a1-timelock-dabad8",
+      "kind": "OWNER_OF",
+      "from": "contract-5300a1",
+      "to": "timelock-dabad8",
+      "direct": true
+    },
+    {
+      "edgeId": "upgrade_admin_of-contract-d3cf97-timelock-dabad8",
+      "kind": "UPGRADE_ADMIN_OF",
+      "from": "contract-d3cf97",
+      "to": "timelock-dabad8",
+      "direct": true
+    },
+    {
+      "edgeId": "owner_of-contract-5300a1-contract-d3cf97",
+      "kind": "OWNER_OF",
+      "from": "contract-5300a1",
+      "to": "contract-d3cf97",
+      "direct": true
+    }
+  ]
+}

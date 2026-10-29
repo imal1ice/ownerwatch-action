@@ -16,3 +16,13 @@ jobs:
           baseline: tests/admin-surface.md
           label: "ownerwatch-action test"
       - run: echo "drifted=${{ steps.check.outputs.drifted }} report=${{ steps.check.outputs.report }}"
+  disclosure-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: check
+        with:
+          disclosure: tests/disclosure.json
+          rpc: https://ethereum-rpc.publicnode.com
+      - run: test "${{ steps.check.outputs.disclosure-ok }}" = "true"
